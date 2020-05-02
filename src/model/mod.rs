@@ -1,9 +1,10 @@
 pub mod actor;
-mod blip;
 pub mod projectile;
-#[path = "../constants.rs"] pub mod constants;
+pub mod components;
 
-use ggez::{graphics};
+use components::{Position, Motion, Cooldown, collision};
+
+use ggez::graphics::{Rect};
 use ggez::nalgebra::{Vector2};
 use std::cmp::PartialEq;
 use std::fmt;
@@ -19,33 +20,31 @@ pub enum ModelState {
 
 pub struct Model {
     pub player: actor::Actor,
-    pub blips: Vec<blip::Blip>,
+    pub player_target_info: Position,
     pub projectiles: Vec<projectile::Projectile>,
     pub state: ModelState,
     animation_update_cycle: i8,
     current_cycle: i8,
     pub turn_duration: f32,
     current_turn_duration: f32,
-    bounds: graphics::Rect,
+    bounds: Rect,
 }
 
 impl Model {
     pub fn new() -> Model {
         let player = actor::Actor::new();
-        let blips = vec![
-            blip::Blip::new((100.0, 200.0))
-        ];
+        let player_target_info = Position::new(Vector2::new(player.position.location.x, player.position.location.y), player.position.rotation);
 
         Model {
             player,
-            blips,
+            player_target_info,
             projectiles: vec![],
             animation_update_cycle: 10,
             current_cycle: 0,
             state: ModelState::WaitingForInput,
             turn_duration: 5.0,
             current_turn_duration: 0.0,
-            bounds: graphics::Rect::new(0.0, 0.0, 5000.0, 5000.0),
+            bounds: Rect::new(0.0, 0.0, 5000.0, 5000.0),
         }
     }
 
@@ -74,10 +73,18 @@ impl Model {
         self.current_turn_duration = self.current_turn_duration + delta_time;
 
         if self.current_turn_duration > self.turn_duration {
-            self.state = ModelState::WaitingForInput;
-            self.current_turn_duration = 0.0;
-            self.player.reset_movement();
+            self.reset_after_execution_end();
         }
+    }
+
+    fn reset_after_execution_end(&mut self) {
+        self.state = ModelState::WaitingForInput;
+        self.current_turn_duration = 0.0;
+        self.player.reset_movement();
+        self.player_target_info = Position::new(
+            Vector2::new(self.player.position.location.x, self.player.position.location.y),
+            self.player.position.rotation
+        );
     }
 
     fn remove_dead_projectiles(&mut self) {
@@ -86,9 +93,6 @@ impl Model {
 
     fn update_animations(&mut self) {
         if self.current_cycle == self.animation_update_cycle {
-            for blip in &mut self.blips {
-                blip.update_animation();
-            }
             self.current_cycle = 0;
         }
     }
@@ -123,34 +127,24 @@ impl fmt::Display for Model {
 }
 
 pub trait WithFrame {
-    fn get_frame(&self) -> &graphics::Rect;
+    fn get_frame(&self) -> &Rect;
 }
 
-pub trait Movable {
-    fn move_to(&mut self, position: (f32, f32));
-}
+// fn points_to_frames(frames: Vec<(f32, f32)>) -> Vec<graphics::Rect> {
+//     frames
+//         .iter()
+//         .map(|(x, y)| {
+//             graphics::Rect::new(
+//                 constants::FRAME_WIDTH_RATIO * x,
+//                 constants::FRAME_HEIGHT_RATIO * y,
+//                 constants::FRAME_WIDTH_RATIO,
+//                 constants::FRAME_HEIGHT_RATIO
+//             )
+//         }
 
-pub fn normalize_vector_by_speed(start: Vector2<f32>, target: Vector2<f32>, speed: f32) -> Vector2<f32> {
-    let delta: Vector2<f32> = target - start;
-    let norm_sq = delta.norm_squared();
-    delta / norm_sq.sqrt() * speed
-}
-
-fn points_to_frames(frames: Vec<(f32, f32)>) -> Vec<graphics::Rect> {
-    frames
-        .iter()
-        .map(|(x, y)| {
-            graphics::Rect::new(
-                constants::FRAME_WIDTH_RATIO * x,
-                constants::FRAME_HEIGHT_RATIO * y,
-                constants::FRAME_WIDTH_RATIO,
-                constants::FRAME_HEIGHT_RATIO
-            )
-        }
-
-        )
-        .collect()
-}
+//         )
+//         .collect()
+// }
 
 fn vec_from_angle(angle: f32) -> Vector2<f32> {
     let vx = angle.cos();

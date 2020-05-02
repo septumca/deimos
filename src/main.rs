@@ -2,8 +2,9 @@ mod assets;
 mod model;
 
 use ggez::{graphics, Context, ContextBuilder, GameResult};
+use ggez::graphics::{DrawParam, DrawMode, Mesh};
 use ggez::event::{self, EventHandler, KeyCode, KeyMods, MouseButton};
-use ggez::nalgebra::{Point2, Vector2, Matrix};
+use ggez::nalgebra::{Point2, Vector2};
 use ggez::conf;
 use ggez::timer;
 
@@ -71,9 +72,13 @@ impl<'a> EventHandler for MainState<'a> {
         match self.model.state {
             model::ModelState::MovementSelection => {
                 self.model.player.set_target_position(Vector2::new(x, y), self.model.turn_duration);
+                self.model.player_target_info.location = self.model.player.position.location + self.model.player.motion.velocity * self.model.turn_duration;
+                ()
             }
             model::ModelState::RotationSelection => {
-                self.model.player.set_target_rotation(Vector2::new(x, y), self.model.turn_duration)
+                self.model.player.set_target_rotation(Vector2::new(x, y), self.model.turn_duration);
+                self.model.player_target_info.rotation = self.model.player.position.rotation + self.model.player.motion.rotation_speed * self.model.turn_duration;
+                ()
             },
             _ => ()
         };
@@ -83,13 +88,13 @@ impl<'a> EventHandler for MainState<'a> {
         graphics::clear(ctx, graphics::BLACK);
 
         if self.model.state != model::ModelState::ExecutingTurn {
-            draw_player_helpers(ctx, &self.assets, &self.model.player, &self.model)?;
+            draw_player_helpers(ctx, &self.assets, &self.model)?;
         }
 
         draw_player(ctx, &self.assets, &self.model.player)?;
-        let draw_string = format!("DEIMOS: {:?}", self.model.state);
+        let draw_string = format!("DEIMOS: {:?}: {:?}", self.model.state, 9);
         let draw_text = graphics::Text::new((draw_string, self.assets.get_font(), 32.0));
-        let draw_params_text = graphics::DrawParam::new()
+        let draw_params_text = DrawParam::new()
             .dest(Point2::new(300.0, 10.0))
             .color(graphics::WHITE)
             .scale(Vector2::new(0.5, 0.5));
@@ -105,39 +110,36 @@ impl<'a> EventHandler for MainState<'a> {
     }
 }
 
-fn draw_player_helpers(ctx: &mut Context, assets: &assets::Assets, actor: &model::actor::Actor, model: &model::Model) -> GameResult {
-    let circle_mesh = graphics::Mesh::new_circle(
+fn draw_player_helpers(ctx: &mut Context, assets: &assets::Assets, model: &model::Model) -> GameResult {
+    let circle_mesh = Mesh::new_circle(
         ctx,
-        graphics::DrawMode::stroke(1.0),
-        Point2::from(actor.current_position),
-        actor.max_speed * model.turn_duration,
+        DrawMode::stroke(1.0),
+        Point2::from(model.player.position.location),
+        model.player.max_speed * model.turn_duration,
         1.0,
         graphics::Color::from_rgb(128, 128, 128)
     )?;
 
-    if actor.target_rotation != 0.0 {
-        let rotation_draw_params = graphics::DrawParam::from((
-            Point2::from(actor.current_position),
-            actor.target_rotation,
+    if model.player_target_info.rotation != model.player.position.rotation {
+        let rotation_draw_params = DrawParam::from((
+            Point2::from(model.player.position.location),
+            model.player_target_info.rotation,
             graphics::Color::from_rgb(128, 128, 128)
         ));
         graphics::draw(ctx, &assets.destroyer_mesh, rotation_draw_params)?;
     }
 
-    match actor.target_position {
-        Some(target_position) => {
-            let line_mesh = graphics::Mesh::new_line(
-                ctx,
-                &[Point2::from(target_position), Point2::from(actor.current_position)],
-                1.0,
-                graphics::Color::from_rgb(128, 128, 128)
-            )?;
-            graphics::draw(ctx, &line_mesh, graphics::DrawParam::default())?;
-        },
-        None => ()
-    };
+    if model.player_target_info.location != model.player.position.location {
+        let line_mesh = Mesh::new_line(
+            ctx,
+            &[Point2::from(model.player_target_info.location), Point2::from(model.player.position.location)],
+            1.0,
+            graphics::Color::from_rgb(128, 128, 128)
+        )?;
+        graphics::draw(ctx, &line_mesh, DrawParam::default())?;
+    }
 
-    graphics::draw(ctx, &circle_mesh, graphics::DrawParam::default())?;
+    graphics::draw(ctx, &circle_mesh, DrawParam::default())?;
 
     Ok(())
 }

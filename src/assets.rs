@@ -1,7 +1,6 @@
 use ggez::{graphics, Context, GameResult};
+use ggez::graphics::{Rect, DrawMode, Mesh};
 use ggez::nalgebra::{Point2};
-
-// #[path = "./constants.rs"] pub mod constants;
 
 
 pub struct Assets {
@@ -44,31 +43,31 @@ impl Assets {
             Point2::new(5.0, -3.0),
         ];
 
-        let destroyer_mesh = graphics::Mesh::new_polygon(
+        let destroyer_mesh = Mesh::new_polygon(
             ctx,
-            graphics::DrawMode::stroke(1.0),
+            DrawMode::stroke(1.0),
             &destroyer_points,
             graphics::WHITE
         )?;
 
-        let fighter_mesh = graphics::Mesh::new_polygon(
+        let fighter_mesh = Mesh::new_polygon(
             ctx,
-            graphics::DrawMode::stroke(1.0),
+            DrawMode::stroke(1.0),
             &fighter_points,
             graphics::WHITE
         )?;
 
-        let bomber_mesh = graphics::Mesh::new_polygon(
+        let bomber_mesh = Mesh::new_polygon(
             ctx,
-            graphics::DrawMode::stroke(1.0),
+            DrawMode::stroke(1.0),
             &bomber_points,
             graphics::WHITE
         )?;
 
-        let projectile_mesh = graphics::Mesh::new_rectangle(
+        let projectile_mesh = Mesh::new_rectangle(
             ctx,
-            graphics::DrawMode::stroke(1.0),
-            graphics::Rect::new(-1.0, -1.0, 2.0, 2.0),
+            DrawMode::stroke(1.0),
+            Rect::new(-1.0, -1.0, 2.0, 2.0),
             graphics::WHITE)?;
 
         Ok(Assets {
