@@ -15,10 +15,10 @@ impl MainMenuScene {
 }
 
 impl Scene for MainMenuScene {
-    fn key_up_event(&mut self, ctx: &mut Context, keycode: KeyCode, _keymod: KeyMods) -> SceneSwitch {
+    fn key_up_event(&mut self, ctx: &mut Context, assets: &Assets, keycode: KeyCode, _keymod: KeyMods) -> SceneSwitch {
         match keycode {
-            KeyCode::Space => {
-                SceneSwitch::push(super::PlayingScene::new())
+            KeyCode::Return => {
+                SceneSwitch::push(super::PlayingScene::new(assets))
             },
             KeyCode::Escape => {
                 ggez::event::quit(ctx);
@@ -30,7 +30,7 @@ impl Scene for MainMenuScene {
 
     fn draw(&mut self, ctx: &mut Context, assets: &mut Assets) {
         let draw_string = format!("ENTER: START\nESCAPE: QUIT");
-        let draw_text = graphics::Text::new((draw_string, assets.get_font(), 32.0));
+        let draw_text = graphics::Text::new((draw_string, assets.font, 32.0));
         let draw_params_text = DrawParam::new()
             .dest(Point2::new(300.0, 10.0))
             .color(graphics::WHITE)

@@ -1,5 +1,5 @@
 mod scenes;
-mod model;
+pub mod model;
 pub mod assets;
 
 use assets::Assets;
@@ -20,13 +20,16 @@ fn main() -> GameResult {
     } else {
         path::PathBuf::from("./resources")
     };
+    let config = assets::load_config();
 
-    let cb = ContextBuilder::new("deimos", "ggez")
-        .window_mode(conf::WindowMode::default().dimensions(640.0, 480.0))
+    let cb = ContextBuilder::new(&config.window_title, "zarosysatravakosi")
+        .window_mode(conf::WindowMode::default().dimensions(config.window_size.0, config.window_size.1))
         .add_resource_path(resource_dir);
     let (ctx, events_loop) = &mut cb.build()?;
 
-    let assets = Assets::new(ctx)?;
+    let assets = Assets::new(ctx, config)?;
+
+    println!("ASSETS CONFIG: {:?}", assets.config);
     let mut scene_mgr = scenes::SceneStack::new(assets);
 
     event::run(ctx, events_loop, &mut scene_mgr)

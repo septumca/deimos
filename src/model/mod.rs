@@ -1,8 +1,10 @@
 pub mod actor;
 pub mod projectile;
 pub mod components;
+pub mod ship;
 
 use components::{Position, Motion, Cooldown, collision};
+use super::Assets;
 
 use ggez::graphics::{Rect};
 use ggez::nalgebra::{Vector2};
@@ -31,8 +33,8 @@ pub struct Model {
 }
 
 impl Model {
-    pub fn new() -> Model {
-        let player = actor::Actor::new();
+    pub fn new(assets: &Assets) -> Model {
+        let player = actor::Actor::new(assets);
         let player_target_info = Position::new(Vector2::new(player.position.location.x, player.position.location.y), player.position.rotation);
 
         Model {

@@ -1,10 +1,13 @@
-use ggez::{graphics};
+use ggez::graphics::DrawParam;
 use ggez::nalgebra::{Point2, Vector2, Matrix, Rotation2};
 use std::fmt;
 
+use super::Assets;
+use super::ship::Ship;
 use super::Motion;
 use super::Position;
 use super::Cooldown;
+
 
 pub struct Gun {
     cooldown: Cooldown
@@ -27,28 +30,27 @@ impl Gun {
 }
 
 pub struct Actor {
-    pub max_speed: f32,
-    pub max_rotation_speed: f32,
-
     pub position: Position,
     pub motion: Motion,
 
     pub gun_port: Gun,
     pub gun_starboard: Gun,
+
+    pub ship: Ship
 }
 
 impl Actor {
-    pub fn new() -> Actor {
+    pub fn new(assets: &Assets) -> Actor {
         let position = Vector2::new(200.0, 200.0);
         let gun_port = Gun::new(1.5);
         let gun_starboard = Gun::new(1.5);
+        let ship = Ship::from_config(&assets.config.ships.destroyer, &assets.config); //TODO rework
         Actor {
-            max_speed: 20.0,
-            max_rotation_speed: 0.2,
             position: Position::new(position, 0.0),
             motion: Motion::zero(),
             gun_port,
-            gun_starboard
+            gun_starboard,
+            ship
         }
     }
 
@@ -63,17 +65,21 @@ impl Actor {
         self.motion = Motion::zero();
     }
 
-    pub fn get_draw_params(&self) -> graphics::DrawParam {
-        graphics::DrawParam::from((Point2::from(self.position.location), self.position.rotation, graphics::WHITE))
+    pub fn get_draw_params(&self) -> DrawParam {
+        DrawParam::new()
+            .src(self.ship.frame_rect)
+            .dest(Point2::from(self.position.location))
+            .offset(self.ship.offset)
+            .rotation(self.position.rotation)
     }
 
     pub fn set_target_position(&mut self, target_position: Vector2<f32>, turn_time: f32) {
         let distance = target_position - self.position.location;
-        let max_scalar_distance_in_turn_time = self.max_speed * turn_time;
+        let max_scalar_distance_in_turn_time = self.ship.max_speed * turn_time;
         let velocity_norm_sq = distance.norm_squared();
 
         self.motion.velocity = if velocity_norm_sq > max_scalar_distance_in_turn_time.powi(2) {
-            distance / velocity_norm_sq.sqrt() * self.max_speed
+            distance / velocity_norm_sq.sqrt() * self.ship.max_speed
         } else {
             distance / turn_time
         };
@@ -89,8 +95,8 @@ impl Actor {
         let rotation = Matrix::angle(&rotation_vector, &rotate_to_normalized);
         let cross_product = rotation_vector.x * rotate_to_normalized.y - rotation_vector.y * rotate_to_normalized.x;
 
-        self.motion.rotation_speed = if rotation > self.max_rotation_speed * turn_time {
-            self.max_rotation_speed * cross_product.signum()
+        self.motion.rotation_speed = if rotation > self.ship.max_rotation_speed * turn_time {
+            self.ship.max_rotation_speed * cross_product.signum()
         } else {
             rotation * cross_product.signum() / turn_time
         };

@@ -1,5 +1,5 @@
 
-use super::super::model;
+pub use super::super::model;
 use super::{Scene, SceneSwitch};
 use super::Assets;
 
@@ -15,8 +15,8 @@ pub struct PlayingScene {
 }
 
 impl PlayingScene {
-    pub fn new() -> PlayingScene {
-        let model = model::Model::new();
+    pub fn new(assets: &Assets) -> PlayingScene {
+        let model = model::Model::new(assets);
         PlayingScene {
             model
         }
@@ -27,13 +27,13 @@ impl PlayingScene {
     }
 
     fn draw(ctx: &mut Context, assets: &Assets, model: &mut model::Model) -> GameResult {
+        PlayingScene::draw_player(ctx, assets, &model.player)?;
         if model.state != model::ModelState::ExecutingTurn {
             PlayingScene::draw_player_helpers(ctx, assets, &model)?;
         }
 
-        PlayingScene::draw_player(ctx, assets, &model.player)?;
         let draw_string = format!("DEIMOS: {:?}: {:?}", model.state, 9);
-        let draw_text = graphics::Text::new((draw_string, assets.get_font(), 32.0));
+        let draw_text = graphics::Text::new((draw_string, assets.font, 32.0));
         let draw_params_text = DrawParam::new()
             .dest(Point2::new(300.0, 10.0))
             .color(graphics::WHITE)
@@ -42,7 +42,7 @@ impl PlayingScene {
         graphics::draw(ctx, &draw_text, draw_params_text)?;
 
         for projectile in &mut model.projectiles {
-            graphics::draw(ctx, &assets.projectile_mesh, projectile.get_draw_params())?;
+            // graphics::draw(ctx, &assets.projectile_mesh, projectile.get_draw_params())?;
         }
 
         Ok(())
@@ -53,18 +53,16 @@ impl PlayingScene {
             ctx,
             DrawMode::stroke(1.0),
             Point2::from(model.player.position.location),
-            model.player.max_speed * model.turn_duration,
+            model.player.ship.max_speed * model.turn_duration,
             1.0,
             graphics::Color::from_rgb(128, 128, 128)
         )?;
 
         if model.player_target_info.rotation != model.player.position.rotation {
-            let rotation_draw_params = DrawParam::from((
-                Point2::from(model.player.position.location),
-                model.player_target_info.rotation,
-                graphics::Color::from_rgb(128, 128, 128)
-            ));
-            graphics::draw(ctx, &assets.destroyer_mesh, rotation_draw_params)?;
+            let rotation_draw_params = model.player.get_draw_params()
+                .rotation(model.player_target_info.rotation)
+                .color(graphics::Color::from_rgba(128, 128, 128, 128));
+            graphics::draw(ctx, &assets.image, rotation_draw_params)?;
         }
 
         if model.player_target_info.location != model.player.position.location {
@@ -85,14 +83,14 @@ impl PlayingScene {
     fn draw_player(ctx: &mut Context, assets: &Assets, actor: &model::actor::Actor) -> GameResult {
         let actor_draw_params = actor.get_draw_params();
 
-        graphics::draw(ctx, &assets.destroyer_mesh, actor_draw_params)?;
+        graphics::draw(ctx, &assets.image, actor_draw_params)?;
 
         Ok(())
     }
 }
 
 impl Scene for PlayingScene {
-    fn update(&mut self, ctx: &mut Context) -> SceneSwitch {
+    fn update(&mut self, ctx: &mut Context, _assets: &Assets) -> SceneSwitch {
         const DESIRED_FPS: u32 = 60;
 
         while timer::check_update_time(ctx, DESIRED_FPS) {
@@ -103,7 +101,7 @@ impl Scene for PlayingScene {
         SceneSwitch::None
     }
 
-    fn key_up_event(&mut self, _ctx: &mut Context, keycode: KeyCode, _keymod: KeyMods) -> SceneSwitch {
+    fn key_up_event(&mut self, _ctx: &mut Context, _assets: &Assets, keycode: KeyCode, _keymod: KeyMods) -> SceneSwitch {
         if self.is_accepting_input() {
             match keycode {
                 KeyCode::Space => {
@@ -128,7 +126,7 @@ impl Scene for PlayingScene {
         SceneSwitch::None
     }
 
-    fn mouse_button_up_event(&mut self, _ctx: &mut Context, _button: MouseButton, x: f32, y: f32) -> SceneSwitch {
+    fn mouse_button_up_event(&mut self, _ctx: &mut Context, _assets: &Assets, _button: MouseButton, x: f32, y: f32) -> SceneSwitch {
         match self.model.state {
             model::ModelState::MovementSelection => {
                 self.model.player.set_target_position(Vector2::new(x, y), self.model.turn_duration);

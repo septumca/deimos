@@ -24,13 +24,13 @@ impl SceneSwitch {
 }
 
 pub trait Scene {
-    fn update(&mut self, _ctx: &mut Context) -> SceneSwitch {
+    fn update(&mut self, _ctx: &mut Context, _assets: &Assets) -> SceneSwitch {
         SceneSwitch::None
     }
-    fn key_up_event(&mut self, _ctx: &mut Context, _keycode: KeyCode, _keymods: KeyMods) -> SceneSwitch {
+    fn key_up_event(&mut self, _ctx: &mut Context, _assets: &Assets, _keycode: KeyCode, _keymods: KeyMods) -> SceneSwitch {
         SceneSwitch::None
     }
-    fn mouse_button_up_event(&mut self, _ctx: &mut Context, _button: MouseButton, _x: f32, _y: f32) -> SceneSwitch {
+    fn mouse_button_up_event(&mut self, _ctx: &mut Context, _assets: &Assets, _button: MouseButton, _x: f32, _y: f32) -> SceneSwitch {
         SceneSwitch::None
     }
     fn draw(&mut self, ctx: &mut Context, assets: &mut Assets);
@@ -49,11 +49,6 @@ impl SceneStack {
         }
     }
 
-    pub fn get_current_scene(&mut self) -> &mut dyn Scene {
-        &mut **self.scenes.last_mut() //WTF?
-            .expect("No available states - critical error in Scenes implementation")
-    }
-
     fn switch(&mut self, next_scene: SceneSwitch) {
         match next_scene {
             SceneSwitch::None => (),
@@ -67,29 +62,30 @@ impl SceneStack {
 
 impl EventHandler for SceneStack {
     fn update(&mut self, ctx: &mut Context) -> GameResult {
-        let current_scene = self.get_current_scene();
-        let next_scene = current_scene.update(ctx);
+        let current_scene = &mut **self.scenes.last_mut() //WTF? - why it cannot be as a function call?
+            .expect("No available states: update - critical error in Scenes implementation");
+        let next_scene = current_scene.update(ctx, &self.assets);
         self.switch(next_scene);
 
         Ok(())
     }
     fn key_up_event(&mut self, ctx: &mut Context, keycode: KeyCode, keymods: KeyMods) {
-        let current_scene = self.get_current_scene();
-        let next_scene = current_scene.key_up_event(ctx, keycode, keymods);
+        let current_scene = &mut **self.scenes.last_mut() //WTF? - why it cannot be as a function call?
+            .expect("No available states: key_up_event - critical error in Scenes implementation");
+        let next_scene = current_scene.key_up_event(ctx, &self.assets, keycode, keymods);
         self.switch(next_scene);
     }
     fn mouse_button_up_event(&mut self, ctx: &mut Context, button: MouseButton, x: f32, y: f32) {
-        let current_scene = self.get_current_scene();
-        let next_scene = current_scene.mouse_button_up_event(ctx, button, x, y);
+        let current_scene = &mut **self.scenes.last_mut() //WTF? - why it cannot be as a function call?
+            .expect("No available states: mouse_button_up_event - critical error in Scenes implementation");
+        let next_scene = current_scene.mouse_button_up_event(ctx, &self.assets, button, x, y);
         self.switch(next_scene);
     }
     fn draw(&mut self, ctx: &mut Context) -> GameResult {
         graphics::clear(ctx, graphics::BLACK);
-
-        //WHY get_current_scene IS NOT WORKING?
-        if let Some((current, _)) = self.scenes.split_last_mut() {
-            current.draw(ctx, &mut self.assets);
-        }
+        let current_scene = &mut **self.scenes.last_mut() //WTF? - why it cannot be as a function call?
+            .expect("No available states: draw - critical error in Scenes implementation");
+        current_scene.draw(ctx, &mut self.assets);
 
         timer::yield_now();
         graphics::present(ctx)
